@@ -266,21 +266,30 @@ export default function App() {
 </div>
 
       <div style={s.dashCard}>
-        <div style={s.tabRow}>
-          <div style={{ display: "flex", gap: "24px" }}>
-            <span style={view === "today" ? s.activeTab : s.tab} onClick={() => setView("today")}>Today</span>
-            <span style={view === "history" ? s.activeTab : s.tab} onClick={() => setView("history")}>History</span>
-          </div>
-          {view === "history" && (
-            <div style={{ display: "flex", gap: "16px" }}>
-              {["daily", "weekly", "monthly"].map((v) => (
-                <span key={v} style={historyView === v ? s.activeTab : s.tab} onClick={() => setHistoryView(v)}>
-                  {v.charAt(0).toUpperCase() + v.slice(1)}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
+    <div style={s.tabRow}>
+  <div style={{ display: "flex", gap: "24px" }}>
+    <span style={view === "today" ? s.activeTab : s.tab} onClick={() => setView("today")}>Today</span>
+    <span style={view === "history" ? s.activeTab : s.tab} onClick={() => setView("history")}>History</span>
+  </div>
+  {view === "history" && window.innerWidth >= 768 && (
+    <div style={{ display: "flex", gap: "16px" }}>
+      {["daily", "weekly", "monthly"].map((v) => (
+        <span key={v} style={historyView === v ? s.activeTab : s.tab} onClick={() => setHistoryView(v)}>
+          {v.charAt(0).toUpperCase() + v.slice(1)}
+        </span>
+      ))}
+    </div>
+  )}
+</div>
+{view === "history" && window.innerWidth < 768 && (
+  <div style={{ display: "flex", gap: "16px", marginBottom: "12px" }}>
+    {["daily", "weekly", "monthly"].map((v) => (
+      <span key={v} style={historyView === v ? s.activeTab : s.tab} onClick={() => setHistoryView(v)}>
+        {v.charAt(0).toUpperCase() + v.slice(1)}
+      </span>
+    ))}
+  </div>
+)}
 
         {view === "today" && (
           <div>
@@ -404,7 +413,7 @@ navText: {
     color: "#fff",
     cursor: "pointer",
     fontFamily: "'DM Mono', monospace",
-    fontSize: "clamp(10px, 1.5vw, 14px)",
+    fontSize: "clamp(9px, 2vw, 14px)",
     whiteSpace: "nowrap",
 },
 authLink: {
@@ -417,10 +426,10 @@ authLink: {
     color: "#fff",
     fontSize: "14px",
   },
-   username: {
+username: {
     color: "#fff",
     fontFamily: "'DM Mono', monospace",
-    fontSize: "clamp(10px, 1.5vw, 14px)",
+    fontSize: "clamp(9px, 2vw, 14px)",
     whiteSpace: "nowrap",
 },
  landingTitle: {
@@ -439,7 +448,7 @@ title: {
     fontFamily: "'Corben', Georgia, serif",
 },
 dashTitle: {
-    fontSize: "clamp(16px, 3vw, 32px)",
+    fontSize: "clamp(18px, 4vw, 32px)",
     fontWeight: "normal",
     color: "#fff",
     margin: 0,
@@ -574,12 +583,16 @@ dashTitle: {
   dashCard: {
     backgroundColor: "rgba(255,255,255,0.25)",
     borderRadius: "20px",
-    padding: "32px",
-    width: "90%",
+    padding: "clamp(8px, 2vw, 32px)",
+    width: "calc(100% - 32px)",
     maxWidth: "1100px",
-    marginTop: "80px",
+    marginTop: "clamp(60px, 12vw, 80px)",
     backdropFilter: "blur(8px)",
     minHeight: "500px",
+    overflowX: "hidden",
+    overflowY: "auto",
+    maxHeight: "80vh",
+    boxSizing: "border-box",
 },
   tabRow: {
     display: "flex",
@@ -608,65 +621,73 @@ activeTab: {
     marginTop: "16px",
     maxWidth: "500px",
   },
-  entryText: {
-    fontSize: "15px",
+ entryText: {
+    fontSize: "clamp(11px, 2vw, 15px)",
     color: "#1a1a1a",
-    marginBottom: "12px",
+    marginBottom: "4px",
     fontFamily: "'DM Mono', monospace",
-  },
-  historyRow: {
+    wordBreak: "break-word",
+},
+ historyRow: {
     display: "flex",
-    alignItems: "center",
-    gap: "16px",
+    alignItems: "flex-start",
+    gap: "8px",
     marginBottom: "10px",
-  },
+},
+
   dateLabel: {
-    fontSize: "14px",
+    fontSize: "clamp(10px, 2vw, 14px)",
     color: "#1a1a1a",
-    minWidth: "80px",
+    minWidth: "60px",
     fontFamily: "'DM Mono', monospace",
-  },
+    whiteSpace: "nowrap",
+},
   historyEntryCard: {
     backgroundColor: "#fff",
     borderRadius: "12px",
-    padding: "12px 20px",
+    padding: "10px 14px",
     flex: 1,
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
- calendarGrid: {
+    flexDirection: "column",
+    gap: "8px",
+    minWidth: 0,
+},
+calendarGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(7, 1fr)",
-    gap: "clamp(3px, 0.5vw, 6px)",
+    gap: "clamp(3px, 1vw, 6px)",
     marginTop: "12px",
 },
 calDayEmpty: {
     backgroundColor: "#d4c97a",
     borderRadius: "8px",
-    padding: "clamp(4px, 1vw, 8px)",
-    height: "clamp(50px, 10vw, 120px)",
+    padding: "4px",
+    height: "clamp(45px, 11vw, 120px)",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
     overflow: "hidden",
+    cursor: "pointer",
 },
+
 calDayFilled: {
     backgroundColor: "#fff",
     borderRadius: "8px",
-    padding: "clamp(4px, 1vw, 8px)",
-    height: "clamp(50px, 10vw, 120px)",
+    padding: "4px",
+    height: "clamp(45px, 11vw, 120px)",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
     overflow: "hidden",
+    cursor: "pointer",
 },
 calDayNull: {
-    height: "clamp(50px, 10vw, 120px)",
+    height: "clamp(45px, 11vw, 120px)",
 },
-  calDayNum: {
-    fontSize: "13px",
+calDayNum: {
+    fontSize: "clamp(8px, 1.5vw, 13px)",
     color: "#1a1a1a",
     fontFamily: "'DM Mono', monospace",
-  },
+},
+
 };
