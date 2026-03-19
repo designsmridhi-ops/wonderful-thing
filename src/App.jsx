@@ -327,42 +327,36 @@ export default function App() {
           </div>
         )}
 
-        {days.map((day, i) => {
-  const entry = day ? getEntryForDay(day, year, month) : null;
-  const extraCount = day ? entries.filter(e => e.entry_date === `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`).length - 1 : 0;
-  const isMobile = window.innerWidth < 768;
-  return (
-    <div
-      key={i}
-      style={entry ? s.calDayFilled : day ? s.calDayEmpty : s.calDayNull}
-      onClick={() => entry && isMobile && setSelectedDay(entry)}
-    >
-      {day && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <span style={s.calDayNum}>{day}</span>
-          {extraCount > 0 && (
-            <span style={{ fontSize: "9px", color: "#3a6b4a", fontFamily: "'DM Mono', monospace" }}>+{extraCount}</span>
-          )}
-        </div>
-      )}
-      {entry && (
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", flex: 1, gap: "4px" }}>
-          {!isMobile && (
-            <p style={{ fontSize: "10px", color: "#3a6b4a", margin: 0, fontFamily: "'DM Mono', monospace" }}>
-              {entry.response.slice(0, 20)}...
-            </p>
-          )}
-          <div style={{ transform: isMobile ? "scale(0.6)" : "scale(1)", transformOrigin: "left bottom" }}>
-            <Stars rating={entry.rating} />
-          </div>
-          {isMobile && (
-            <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#f4a7c3" }} />
-          )}
-        </div>
+        {view === "history" && historyView === "monthly" && (
+          <div style={{ marginTop: "16px" }}>
+            {(() => {
+              const { days, year, month } = getMonthDays();
+              const monthName = new Date(year, month).toLocaleDateString("en-US", { month: "long" });
+              return (
+                <div>
+                  <p style={s.dateLabel}>{monthName}</p>
+                  <div style={s.calendarGrid}>
+                    {days.map((day, i) => {
+                      const entry = day ? getEntryForDay(day, year, month) : null;
+                      return (
+                       <div key={i} style={entry ? s.calDayFilled : day ? s.calDayEmpty : s.calDayNull}>
+  {day && (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <span style={s.calDayNum}>{day}</span>
+      {entries.filter(e => e.entry_date === `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`).length > 1 && (
+        <span style={{ fontSize: "10px", color: "#3a6b4a", fontFamily: "'DM Mono', monospace" }}>
+          +{entries.filter(e => e.entry_date === `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`).length - 1}
+        </span>
       )}
     </div>
-  );
-})}
+  )}
+  {entry && (
+    <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", flex: 1 }}>
+      <p style={{ fontSize: "10px", color: "#3a6b4a", margin: "4px 0", fontFamily: "'DM Mono', monospace" }}>{entry.response.slice(0, 20)}...</p>
+      <Stars rating={entry.rating} />
+    </div>
+  )}
+</div>
                       );
                     })}
                   </div>
