@@ -13,14 +13,14 @@ const Video = () => (
       position: "fixed",
       top: "50%",
       left: "50%",
-      minWidth: "100vw",
-      minHeight: "100vh",
+      minWidth: "130vw",
+      minHeight: "130vh",
       width: "auto",
       height: "auto",
       transform: "translate(-50%, -50%)",
       objectFit: "cover",
       zIndex: -1,
-      transition: "transform 0.4s ease-out",
+      transition: "transform 0.6s ease-out",
     }}
   >
     <source src={bgVideo} type="video/mp4" />
@@ -31,6 +31,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [authMode, setAuthMode] = useState(null);
   const [screen, setScreen] = useState("home");
   const [response, setResponse] = useState("");
@@ -40,6 +41,14 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("today");
   const [historyView, setHistoryView] = useState("daily");
+  const [selectedDayEntries, setSelectedDayEntries] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -55,6 +64,8 @@ export default function App() {
     if (session) {
       fetchEntries();
       setScreen("home");
+      const savedUsername = session.user.user_metadata?.display_name || session.user.email?.split("@")[0];
+      setUsername(savedUsername);
     }
   }, [session]);
 
@@ -62,8 +73,8 @@ export default function App() {
     const handleMouseMove = (e) => {
       const video = document.getElementById("bg-video");
       if (!video) return;
-      const x = (e.clientX / window.innerWidth - 0.5) * 10;
-      const y = (e.clientY / window.innerHeight - 0.5) * 10;
+      const x = (e.clientX / window.innerWidth - 0.5) * 30;
+      const y = (e.clientY / window.innerHeight - 0.5) * 30;
       video.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
     };
     window.addEventListener("mousemove", handleMouseMove);
@@ -84,7 +95,11 @@ export default function App() {
 
   async function handleAuth(type) {
     if (type === "signup") {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { display_name: username } }
+      });
       if (error) alert(error.message);
       else alert("Check your email to confirm your account!");
     } else {
@@ -109,7 +124,7 @@ export default function App() {
     }
   }
 
-  const username = session?.user?.email?.split("@")[0];
+  const displayName = session?.user?.user_metadata?.display_name || session?.user?.email?.split("@")[0];
 
   function getWeekEntries() {
     const now = new Date();
@@ -135,20 +150,19 @@ export default function App() {
     return entries.find((e) => e.entry_date === dateStr);
   }
 
-  const Stars = ({ rating, onRate }) => (
-    <div style={{ display: "flex", gap: "4px" }}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <span
-          key={n}
-          onClick={() => onRate && onRate(n)}
-          style={{ fontSize: "24px", cursor: onRate ? "pointer" : "default", color: n <= rating ? "#f4a7c3" : "#ddd" }}
-        >
-          ★
-        </span>
-      ))}
-    </div>
-  );
-
+ const Stars = ({ rating, onRate }) => (
+  <div style={{ display: "flex", gap: "4px" }}>
+    {[1, 2, 3, 4, 5].map((n) => (
+      <span
+        key={n}
+        onClick={() => onRate && onRate(n)}
+        style={{ fontSize: isMobile ? "16px" : "24px", cursor: onRate ? "pointer" : "default", color: n <= rating ? "#FFE847" : "#ddd" }}
+      >
+        ★
+      </span>
+    ))}
+  </div>
+);
   if (loading) return (
     <div style={s.page}>
       <Video />
@@ -169,6 +183,9 @@ export default function App() {
         {authMode && (
           <div style={s.authCard}>
             <p style={s.authCardTitle}>{authMode === "login" ? "Log in" : "Sign up"}</p>
+            {authMode === "signup" && (
+              <input style={s.input} placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
+            )}
             <input style={s.input} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
             <input style={s.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
             <button style={s.darkBtn} onClick={() => handleAuth(authMode)}>
@@ -191,7 +208,19 @@ export default function App() {
           <span style={s.navText} onClick={() => setScreen("home")}>home</span>
         </div>
         <div style={s.topRight}>
-          <span style={s.username}>{username}'s wonderful life</span>
+         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+  <span style={s.username}>{displayName}'s wonderful life</span>
+  <span
+    style={{ color: "#fff", cursor: "pointer", fontSize: "12px", opacity: 0.7 }}
+    onClick={() => {
+      const newName = prompt("Enter new username:", displayName);
+      if (newName && newName.trim()) {
+        supabase.auth.updateUser({ data: { display_name: newName.trim() } })
+          .then(() => window.location.reload());
+      }
+    }}
+  >✏️</span>
+</div>
         </div>
         <h1 style={s.title}>Something Wonderful</h1>
         <div style={s.card}>
@@ -215,7 +244,7 @@ export default function App() {
           <span style={s.navText} onClick={() => setScreen("home")}>home</span>
         </div>
         <div style={s.topRight}>
-          <span style={s.username}>{username}'s wonderful life</span>
+          <span style={s.username}>{displayName}'s wonderful life</span>
         </div>
         <h1 style={s.title}>Something Wonderful</h1>
         <div style={s.card}>
@@ -243,10 +272,10 @@ export default function App() {
           <span style={s.navText} onClick={() => fetchEntries()}>home</span>
         </div>
         <div style={s.topRight}>
-          <span style={s.username}>{username}'s wonderful life</span>
+          <span style={s.username}>{displayName}'s wonderful life</span>
         </div>
         <h1 style={s.title}>Something Wonderful</h1>
-        <div style={s.btnGroup}>
+        <div style={isMobile ? { ...s.btnGroup, width: "calc(100% - 40px)" } : s.btnGroup}>
           <button style={s.outlineBtn} onClick={() => setScreen("tomorrow")}>is going to happen to me tomorrow</button>
           <button style={s.greenBtn} onClick={() => setScreen("today-entry")}>happened to me today</button>
         </div>
@@ -257,39 +286,40 @@ export default function App() {
   return (
     <div style={s.page}>
       <Video />
-   <div style={s.dashHeader}>
-  <h1 style={s.dashTitle}>Something Wonderful</h1>
-  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
-    <span style={s.username}>{username}'s wonderful life</span>
-    <span style={s.navText} onClick={() => supabase.auth.signOut()}>sign out</span>
-  </div>
-</div>
+      <div style={s.dashHeader}>
+        <h1 style={s.dashTitle}>Something Wonderful</h1>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+          <span style={s.username}>{displayName}'s wonderful life</span>
+          <span style={s.navText} onClick={() => supabase.auth.signOut()}>sign out</span>
+        </div>
+      </div>
 
       <div style={s.dashCard}>
-    <div style={s.tabRow}>
-  <div style={{ display: "flex", gap: "24px" }}>
-    <span style={view === "today" ? s.activeTab : s.tab} onClick={() => setView("today")}>Today</span>
-    <span style={view === "history" ? s.activeTab : s.tab} onClick={() => setView("history")}>History</span>
-  </div>
-  {view === "history" && window.innerWidth >= 768 && (
-    <div style={{ display: "flex", gap: "16px" }}>
-      {["daily", "weekly", "monthly"].map((v) => (
-        <span key={v} style={historyView === v ? s.activeTab : s.tab} onClick={() => setHistoryView(v)}>
-          {v.charAt(0).toUpperCase() + v.slice(1)}
-        </span>
-      ))}
-    </div>
-  )}
-</div>
-{view === "history" && window.innerWidth < 768 && (
-  <div style={{ display: "flex", gap: "16px", marginBottom: "12px" }}>
-    {["daily", "weekly", "monthly"].map((v) => (
-      <span key={v} style={historyView === v ? s.activeTab : s.tab} onClick={() => setHistoryView(v)}>
-        {v.charAt(0).toUpperCase() + v.slice(1)}
-      </span>
-    ))}
-  </div>
-)}
+        <div style={s.tabRow}>
+          <div style={{ display: "flex", gap: "24px" }}>
+            <span style={view === "today" ? s.activeTab : s.tab} onClick={() => setView("today")}>Today</span>
+            <span style={view === "history" ? s.activeTab : s.tab} onClick={() => setView("history")}>History</span>
+          </div>
+          {view === "history" && !isMobile && (
+            <div style={{ display: "flex", gap: "16px" }}>
+              {["daily", "weekly", "monthly"].map((v) => (
+                <span key={v} style={historyView === v ? s.activeTab : s.tab} onClick={() => setHistoryView(v)}>
+                  {v.charAt(0).toUpperCase() + v.slice(1)}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {view === "history" && isMobile && (
+          <div style={{ display: "flex", gap: "16px", marginBottom: "12px" }}>
+            {["daily", "weekly", "monthly"].map((v) => (
+              <span key={v} style={historyView === v ? s.activeTab : s.tab} onClick={() => setHistoryView(v)}>
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </span>
+            ))}
+          </div>
+        )}
 
         {view === "today" && (
           <div>
@@ -306,21 +336,21 @@ export default function App() {
           </div>
         )}
 
-       {view === "history" && historyView === "daily" && (
-  <div style={{ marginTop: "16px" }}>
-    {entries
-      .filter(e => e.entry_date === new Date().toISOString().split("T")[0])
-      .map((entry) => (
-        <div key={entry.id} style={s.historyRow}>
-          <span style={s.dateLabel}>{new Date(entry.entry_date + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric" })}</span>
-          <div style={s.historyEntryCard}>
-            <span style={s.entryText}>{entry.response}</span>
-            <Stars rating={entry.rating} />
+        {view === "history" && historyView === "daily" && (
+          <div style={{ marginTop: "16px" }}>
+            {entries
+              .filter(e => e.entry_date === new Date().toISOString().split("T")[0])
+              .map((entry) => (
+                <div key={entry.id} style={s.historyRow}>
+                  <span style={s.dateLabel}>{new Date(entry.entry_date + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric" })}</span>
+                  <div style={s.historyEntryCard}>
+                    <span style={s.entryText}>{entry.response}</span>
+                    <Stars rating={entry.rating} />
+                  </div>
+                </div>
+              ))}
           </div>
-        </div>
-      ))}
-  </div>
-)}
+        )}
 
         {view === "history" && historyView === "weekly" && (
           <div style={{ marginTop: "16px" }}>
@@ -338,6 +368,31 @@ export default function App() {
 
         {view === "history" && historyView === "monthly" && (
           <div style={{ marginTop: "16px" }}>
+            {selectedDayEntries.length > 0 && (
+  <div style={{
+    position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
+    backgroundColor: "rgba(0,0,0,0.5)", zIndex: 100,
+    display: "flex", alignItems: "center", justifyContent: "center"
+  }} onClick={() => setSelectedDayEntries([])}>
+    <div style={{
+      backgroundColor: "#fff", borderRadius: "16px", padding: "24px",
+      maxWidth: "360px", width: "90%", maxHeight: "80vh", overflowY: "auto"
+    }} onClick={e => e.stopPropagation()}>
+      <p style={{ fontSize: "12px", color: "#888", fontFamily: "'DM Mono', monospace", marginBottom: "16px" }}>
+        {new Date(selectedDayEntries[0].entry_date + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric" })}
+      </p>
+      {selectedDayEntries.map((entry, i) => (
+        <div key={entry.id} style={{ marginBottom: "16px", paddingBottom: "16px", borderBottom: i < selectedDayEntries.length - 1 ? "1px solid #eee" : "none" }}>
+          <p style={{ fontSize: "15px", color: "#1a1a1a", fontFamily: "'DM Mono', monospace", marginBottom: "8px" }}>
+            {entry.response}
+          </p>
+          <Stars rating={entry.rating} />
+        </div>
+      ))}
+      <button style={{ ...s.darkBtn, marginTop: "8px" }} onClick={() => setSelectedDayEntries([])}>close</button>
+    </div>
+  </div>
+)}
             {(() => {
               const { days, year, month } = getMonthDays();
               const monthName = new Date(year, month).toLocaleDateString("en-US", { month: "long" });
@@ -347,25 +402,43 @@ export default function App() {
                   <div style={s.calendarGrid}>
                     {days.map((day, i) => {
                       const entry = day ? getEntryForDay(day, year, month) : null;
+                      const extraCount = day ? entries.filter(e => e.entry_date === `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`).length - 1 : 0;
                       return (
-                       <div key={i} style={entry ? s.calDayFilled : day ? s.calDayEmpty : s.calDayNull}>
-  {day && (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-      <span style={s.calDayNum}>{day}</span>
-      {entries.filter(e => e.entry_date === `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`).length > 1 && (
-        <span style={{ fontSize: "10px", color: "#3a6b4a", fontFamily: "'DM Mono', monospace" }}>
-          +{entries.filter(e => e.entry_date === `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`).length - 1}
-        </span>
-      )}
-    </div>
-  )}
-  {entry && (
-    <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", flex: 1 }}>
-      <p style={{ fontSize: "10px", color: "#3a6b4a", margin: "4px 0", fontFamily: "'DM Mono', monospace" }}>{entry.response.slice(0, 20)}...</p>
-      <Stars rating={entry.rating} />
-    </div>
-  )}
-</div>
+                        <div
+                          key={i}
+                          style={entry ? s.calDayFilled : day ? s.calDayEmpty : s.calDayNull}
+                          onClick={() => {
+  if (day) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const dayEntries = entries.filter(e => e.entry_date === dateStr);
+    if (dayEntries.length > 0) setSelectedDayEntries(dayEntries);
+  }
+}}
+                        >
+                          {day && (
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                              <span style={s.calDayNum}>{day}</span>
+                              {extraCount > 0 && (
+                                <span style={{ fontSize: "9px", color: "#3a6b4a", fontFamily: "'DM Mono', monospace" }}>+{extraCount}</span>
+                              )}
+                            </div>
+                          )}
+                          {entry && (
+                            <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", flex: 1, gap: "2px" }}>
+                              {!isMobile && (
+                                <p style={{ fontSize: "10px", color: "#3a6b4a", margin: 0, fontFamily: "'DM Mono', monospace" }}>
+                                  {entry.response.slice(0, 20)}...
+                                </p>
+                              )}
+                              <div style={{ transform: isMobile ? "scale(0.55)" : "scale(1)", transformOrigin: "left bottom" }}>
+                                <Stars rating={entry.rating} />
+                              </div>
+                              {isMobile && (
+                                <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#f4a7c3" }} />
+                              )}
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -394,7 +467,7 @@ const s = {
     background: "transparent",
     border: "none",
     outline: "none",
-},
+  },
   topLeft: {
     position: "absolute",
     top: "24px",
@@ -408,53 +481,52 @@ const s = {
     gap: "8px",
     alignItems: "center",
   },
-
-navText: {
+  navText: {
     color: "#fff",
     cursor: "pointer",
     fontFamily: "'DM Mono', monospace",
     fontSize: "clamp(9px, 2vw, 14px)",
     whiteSpace: "nowrap",
-},
-authLink: {
+  },
+  authLink: {
     color: "#fff",
     cursor: "pointer",
     fontSize: "14px",
     fontFamily: "'DM Mono', monospace",
-},
+  },
   authDivider: {
     color: "#fff",
     fontSize: "14px",
   },
-username: {
+ username: {
     color: "#fff",
-    fontFamily: "'DM Mono', monospace",
+    fontFamily: "'Corben', Georgia, serif",
     fontSize: "clamp(9px, 2vw, 14px)",
     whiteSpace: "nowrap",
 },
- landingTitle: {
-    fontSize: "48px",
+  landingTitle: {
+    fontSize: "clamp(28px, 6vw, 48px)",
     fontWeight: "normal",
     color: "#fff",
     marginBottom: "40px",
     fontFamily: "'Corben', Georgia, serif",
-},
-title: {
-    fontSize: "36px",
+  },
+  title: {
+    fontSize: "clamp(22px, 5vw, 36px)",
     fontWeight: "normal",
     color: "#fff",
     marginBottom: "32px",
     textAlign: "center",
     fontFamily: "'Corben', Georgia, serif",
-},
-dashTitle: {
+  },
+  dashTitle: {
     fontSize: "clamp(18px, 4vw, 32px)",
     fontWeight: "normal",
     color: "#fff",
     margin: 0,
     fontFamily: "'Corben', Georgia, serif",
     whiteSpace: "nowrap",
-},
+  },
   authCard: {
     backgroundColor: "#fff",
     borderRadius: "12px",
@@ -508,7 +580,7 @@ dashTitle: {
     backgroundColor: "rgba(255,255,255,0.85)",
     borderRadius: "16px",
     padding: "32px",
-    width: "420px",
+    width: "min(420px, calc(100% - 40px))",
     display: "flex",
     flexDirection: "column",
     gap: "16px",
@@ -570,7 +642,7 @@ dashTitle: {
     borderRadius: "8px",
     backdropFilter: "blur(4px)",
   },
- dashHeader: {
+  dashHeader: {
     position: "absolute",
     top: "16px",
     left: "16px",
@@ -579,7 +651,7 @@ dashTitle: {
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: "8px",
-},
+  },
   dashCard: {
     backgroundColor: "rgba(255,255,255,0.25)",
     borderRadius: "20px",
@@ -593,26 +665,25 @@ dashTitle: {
     overflowY: "auto",
     maxHeight: "80vh",
     boxSizing: "border-box",
-},
+  },
   tabRow: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: "8px",
   },
-tab: {
-    fontSize: "16px",
+  tab: {
+    fontSize: "clamp(13px, 2.5vw, 16px)",
     color: "#ffffff",
     cursor: "pointer",
     fontFamily: "'Corben', Georgia, serif",
-},
-activeTab: {
-    fontSize: "16px",
+  },
+  activeTab: {
+    fontSize: "clamp(13px, 2.5vw, 16px)",
     color: "#ffffff",
     cursor: "pointer",
     fontFamily: "'Corben', Georgia, serif",
-    textDecoration: "underline",
-    fontWeight: "medium",
+    fontWeight: "600",
 },
   entryCard: {
     backgroundColor: "#fff",
@@ -621,27 +692,26 @@ activeTab: {
     marginTop: "16px",
     maxWidth: "500px",
   },
- entryText: {
+  entryText: {
     fontSize: "clamp(11px, 2vw, 15px)",
     color: "#1a1a1a",
     marginBottom: "4px",
     fontFamily: "'DM Mono', monospace",
     wordBreak: "break-word",
-},
- historyRow: {
+  },
+  historyRow: {
     display: "flex",
     alignItems: "flex-start",
     gap: "8px",
     marginBottom: "10px",
-},
-
+  },
   dateLabel: {
     fontSize: "clamp(10px, 2vw, 14px)",
     color: "#1a1a1a",
     minWidth: "60px",
     fontFamily: "'DM Mono', monospace",
     whiteSpace: "nowrap",
-},
+  },
   historyEntryCard: {
     backgroundColor: "#fff",
     borderRadius: "12px",
@@ -651,14 +721,14 @@ activeTab: {
     flexDirection: "column",
     gap: "8px",
     minWidth: 0,
-},
-calendarGrid: {
+  },
+  calendarGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(7, 1fr)",
     gap: "clamp(3px, 1vw, 6px)",
     marginTop: "12px",
-},
-calDayEmpty: {
+  },
+  calDayEmpty: {
     backgroundColor: "#d4c97a",
     borderRadius: "8px",
     padding: "4px",
@@ -668,9 +738,8 @@ calDayEmpty: {
     justifyContent: "space-between",
     overflow: "hidden",
     cursor: "pointer",
-},
-
-calDayFilled: {
+  },
+  calDayFilled: {
     backgroundColor: "#fff",
     borderRadius: "8px",
     padding: "4px",
@@ -680,14 +749,13 @@ calDayFilled: {
     justifyContent: "space-between",
     overflow: "hidden",
     cursor: "pointer",
-},
-calDayNull: {
+  },
+  calDayNull: {
     height: "clamp(45px, 11vw, 120px)",
-},
-calDayNum: {
+  },
+  calDayNum: {
     fontSize: "clamp(8px, 1.5vw, 13px)",
     color: "#1a1a1a",
     fontFamily: "'DM Mono', monospace",
-},
-
+  },
 };
